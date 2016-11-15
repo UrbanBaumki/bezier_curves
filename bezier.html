@@ -1,0 +1,171 @@
+﻿<!doctype html>
+<html>
+<head>
+ <meta charset="UTF-8"> 
+ <title>Bezier curves editor</title>
+</head>
+<style type="text/css">
+	body{
+		margin: 0;
+	}
+	button.lep {
+		width: 100px;
+		height: 40px;
+		border-radius: 4px;
+		border: none;
+		background: gray;
+		color: white;
+		margin-top: 5px;
+		transition: 0.2s all linear;
+		}
+	button.lep:hover{
+		background: #00afef;
+
+	}
+</style>
+<script src="bezier.js"></script>
+
+<script type="text/javascript">
+
+this.addEventListener("load", init, false);
+
+var canvas, context;
+
+//Transformacijska matrika
+var m;
+var lastDelIndex;
+var vseKrivulje = new Array();
+var stKrivuljLB = 0;
+var krivNum = 1;
+var lb;
+var width, height;
+var bDrag = false;
+var draggedPt = null;
+function init(){
+	 width = window.innerWidth;
+	 height = window.innerHeight;
+	m = new Matrix4f([[1 ,-3,3,-1],[0,3,-6,3],[0,0,3,-3],[0,0,0,1]]);
+	canvas = document.getElementById("platno");
+
+	canvas.width = width*0.7;
+	canvas.height = height-10;
+	context = canvas.getContext("2d");
+
+	lb = document.getElementById("LBkrivulje");
+	vseKrivulje.push(new Krivulja(m, context, stKrivuljLB));
+	krivNum++;
+	lb.options[lb.selectedIndex].value = stKrivuljLB++;
+	canvas.addEventListener("click", novaTocka);
+	canvas.addEventListener("mousedown", startDrag);
+	canvas.addEventListener("mousemove", moveDrag);
+	canvas.addEventListener("mouseup", stopDrag);
+}
+function startDrag(e){
+	if(!bDrag)return;
+	//check for collision:
+	
+	var kIndex = lb.options[lb.selectedIndex].value;	
+	draggedPt = vseKrivulje[kIndex].checkCollision(e);
+	console.log(draggedPt);
+
+}
+function moveDrag(e){
+	if(!bDrag) return;
+	var mX = e.offsetX;
+	var mY = e.offsetY;
+	var kIndex = lb.options[lb.selectedIndex].value;
+	if(draggedPt != null){
+		vseKrivulje[kIndex].pts[draggedPt][0] = mX;
+		vseKrivulje[kIndex].pts[draggedPt][1] = mY;
+		repaintAndCalculate();
+	}
+}
+function stopDrag(e){
+	if(!bDrag)return;
+	draggedPt = null;
+}
+function novaTocka(e){
+	if(bDrag) return;
+	var kIndex = lb.options[lb.selectedIndex].value;
+	if (kIndex == -1)
+		return;
+	vseKrivulje[kIndex].tocka(e);
+}
+function izbrisi(){
+	var kIndex = lb.options[lb.selectedIndex].value;
+	lastDelIndex = kIndex;
+	vseKrivulje.splice( kIndex , 1 ); 
+	lb.remove(kIndex);
+	stKrivuljLB--;
+	lb.selectedIndex = stKrivuljLB-1;
+	repaint();
+	shiftIndexes();
+}
+function shiftIndexes(){
+	for(var i = 0; i < lb.options.length; i++){
+		var ind = lb.options[i].value;
+		if( ind > lastDelIndex){
+			lb.options[i].value = ind-1;
+		}
+	}
+}
+function repaintAndCalculate(){
+	context.fillStyle = "#ffffff";
+	context.fillRect(0,0,width, height);
+	for(var i = 0; i < vseKrivulje.length; i++){
+		vseKrivulje[i].output();
+		vseKrivulje[i].paintPts();
+	}
+}
+function repaint(){
+	context.fillStyle = "#ffffff";
+	context.fillRect(0,0,width, height);
+	for(var i = 0; i < vseKrivulje.length; i++){
+		vseKrivulje[i].multi(true);
+	}
+}
+function barva(){
+	var r = document.getElementById("r").value;
+
+	var g = document.getElementById("g").value;
+
+	var b = document.getElementById("b").value;
+	
+	var kIndex = lb.options[lb.selectedIndex].value;
+
+	vseKrivulje[kIndex].colorr="rgb("+r+","+g+","+b+")";
+}
+
+function nova(){
+	//kreiramo novo opcijo
+	newOption = new Option("Krivulja "+(krivNum), stKrivuljLB );
+	vseKrivulje.push(new Krivulja(m, context, stKrivuljLB));
+	lb.options[stKrivuljLB] = newOption; //jo dodamo
+	lb.selectedIndex = stKrivuljLB++; // jo označimo
+	barva();
+	krivNum++;
+}
+
+</script>
+
+<body>
+	<canvas id="platno" style="margin: 4px 0px 0px 4px; border: 1px solid black; float:left;"></canvas>
+	<div style="margin: 4px 0px 0px 0px; min-width:240px; padding: 25px; min-height: 450px; float:left; border: 1px solid black;">
+		<button class="lep" onclick="nova()">Nova krivulja</button>&nbsp;<button class="lep" onclick="izbrisi()">Izbriši krivuljo</button><br /><button class="lep" onclick="bDrag = true;">Urejaj krivuljo</button>&nbsp;<button class="lep" onclick="bDrag = false;">Ustavi urejanje</button>
+		<br >
+		<select style="clear:both; margin-top: 10px; width:150px;" size="10" id="LBkrivulje">
+			<option selected>Krivulja 1
+		</select> 
+
+
+		<h4>Barve</h4>
+		<h5>R</h5>
+		<input id="r" name="r" type="range" min="0" max="255" value="0" oninput="rOut.value = r.value; barva();" \><output id="rOut" >0</output>
+		<h5>G</h5>
+		<input id="g" name="g" type="range" min="0" max="255" value="0" oninput="gOut.value = g.value; barva();" \><output id="gOut" >0</output>
+		<h5>B</h5>
+		<input id="b" name="b" type="range" min="0" max="255" value="0" oninput="bOut.value = b.value; barva();" \><output id="bOut" >0</output>
+	</div>
+
+</body>
+</html>
