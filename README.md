@@ -1,6 +1,6 @@
 # Bezier Curves drawing/calculating app
 
-A simple web app for drawing interpolated bezier curves with matrix transforms. I haven't used any external librarys for this, so I had to implement matrix class myself.
+A simple web app for drawing interpolated bezier curves with matrix transforms. I haven't used any external libraries for this, so I had to implement matrix class myself.
 
 Curves editor is currently not functional, since it hasn't been updated yet. 
 But the drawing works perfectly.
